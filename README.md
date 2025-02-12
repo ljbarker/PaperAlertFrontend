@@ -16,11 +16,21 @@ Install `pip` dependencies with the provided `requirements.txt`:
 pip install -r requirements.txt
 ```
 
-### 🚀 2. Run the application
+### 🚀 2. Run the frontend application
 
 Initialize and run the app:
 
 ```
+cd frontend
 reflex init
 reflex run
+```
+
+### 🚀 3. Run the backend
+
+Run the backend:
+
+```
+cd backend
+python app.py
 ```
