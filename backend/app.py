@@ -33,7 +33,7 @@ def query_papers():
                     f"✅ Next email: {response['next_email']}"
                 )
             elif "summaries" in response:
-                message = "\n".join(response["summaries"])  # Properly format summaries
+                message = response["summaries"]  # Properly format summaries
             else:
                 message = "No relevant papers found."
         else:
