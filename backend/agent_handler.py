@@ -10,9 +10,8 @@ import threading
 
 # Set up OpenAI API key
 client = OpenAI(
-    api_key="",  # This is the default and can be omitted
+    api_key="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",  # This is the default and can be omitted
 )
-
 
 def interpret_user_query(query):
     """
@@ -23,11 +22,12 @@ def interpret_user_query(query):
         dict: Contains the topic, task type (search or schedule), and frequency (if applicable).
     """
     prompt = f"""
-    Analyze the following user query and extract the topic of interest, whether the user wants periodic email updates, and the frequency (weekly, daily, monthly, or none). Respond in this JSON format:
+    Analyze the following user query and extract the topic of interest, whether the user wants periodic email updates, the frequency (weekly, daily, monthly, or none), and the number requested. Respond in this JSON format:
     {{
         "topic": "string",
         "send_email": true or false,
-        "frequency": "none", "weekly", "daily", or "monthly"
+        "frequency": "none", "weekly", "daily", or "monthly",
+        "number": "number"
     }}
     Query: "{query}"
     """
@@ -45,6 +45,8 @@ def interpret_user_query(query):
     response_text = ""
     for chunk in response:
         response_text += chunk.choices[0].delta.content or ""
+
+    response_text = clean_response(response_text)
        
     try:
         result_json = json.loads(response_text)  # Parse JSON from OpenAI response
@@ -53,6 +55,55 @@ def interpret_user_query(query):
         print("Error decoding JSON response:", e)
         print("Response received:", response_text)
         raise
+
+def clean_response(response_text):
+    """
+    Remove '''json and ''' tags from the response if they exist.
+    """
+    # Remove starting '''json and ending '''
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]  # Remove '''json
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]  # Remove '''
+
+    # Strip any leading or trailing whitespace
+    return response_text.strip()
+
+
+def reorder_papers_by_relevance(topic, papers, quantity):
+    """
+    Reorder papers based on relevance to the specified topic using OpenAI.
+    """
+    paper_summaries = json.dumps(papers)
+    prompt = f"""
+    You are given a list of research papers related to the topic '{topic}'. Here are the papers: '{paper_summaries}'.
+    Reorder these papers from most relevant to least relevant based on their titles and summaries, cutting the number of papers to the '{quantity}' most relevant.
+    Return the reordered list as JSON with the same structure as the input and no additional content, explanation, or rationale.
+    """
+
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        stream=True,
+    )
+
+    response_text = ""
+    for chunk in response:
+        response_text += chunk.choices[0].delta.content or ""
+
+    response_text = clean_response(response_text)
+       
+    try:
+        result_json = json.loads(response_text)  # Parse JSON from OpenAI response
+        return result_json
+    except json.JSONDecodeError as e:
+        print("Error decoding JSON response:", e)
+        print("Response received:", response_text)
+        raise
+
 
 def handle_openai_response(query):
     """
@@ -70,14 +121,16 @@ def handle_openai_response(query):
     topic = response.get("topic", "")
     send_email_updates = response.get("send_email", False)
     frequency = response.get("frequency", "none")
+    quantity = response.get("number", 5)
 
     # Perform the arXiv search
-    papers = search_papers(topic)
+    papers = search_papers(topic, quantity)
+    ordered_papers = reorder_papers_by_relevance(topic, papers, quantity)
 
     if send_email_updates:
         # Prepare email content
         subject = f"Updates on {topic}"
-        body = summarize_papers(papers)
+        body = summarize_papers(ordered_papers)
 
         if frequency != "none":
             # Schedule periodic notifications
@@ -96,7 +149,7 @@ def handle_openai_response(query):
     
     else:
         # Return paper summaries for immediate display
-        return {"summaries": summarize_papers(papers)}
+        return {"summaries": summarize_papers(ordered_papers)}
 
 def run_scheduler():
     """Run the scheduler in a background thread."""
