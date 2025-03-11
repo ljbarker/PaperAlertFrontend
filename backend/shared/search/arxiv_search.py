@@ -1,6 +1,6 @@
 import arxiv
 
-def search_papers(topic, max_results=5):
+def search_papers(topic, max_results):
     """
     Search arXiv for the newest papers based on the given topic.
 
@@ -13,7 +13,7 @@ def search_papers(topic, max_results=5):
     """
     search = arxiv.Search(
         query=topic,
-        max_results=max_results,
+        max_results=int(max_results)+10,
         sort_by=arxiv.SortCriterion.SubmittedDate,  # Sort by newest submissions
     )
 
@@ -42,10 +42,10 @@ def summarize_papers(papers):
     if not papers:
         return "No papers found for the given topic."
 
-    summary = "Here are the recent papers:\n\n"
+    summary = "Here are the recent papers: "
     for paper in papers:
-        summary += f"- **{paper['title']}**\n"
-        summary += f"  {paper['summary'][:300]}...\n"
-        summary += f"  [Read More]({paper['link']})\n\n"
+        summary += f"- **{paper['title']}**"
+        summary += f"  {paper['summary'][:300]}..."
+        summary += f"  [Read More]({paper['link']})"
 
     return summary
