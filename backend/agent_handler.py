@@ -10,7 +10,7 @@ import threading
 
 # Set up OpenAI API key
 client = OpenAI(
-    api_key="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",  # This is the default and can be omitted
+    api_key="",
 )
 
 def interpret_user_query(query):
