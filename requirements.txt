@@ -6,3 +6,8 @@ flask-cors
 requests
 arxiv
 schedule
+adapters
+torch
+scikit-learn
+tqdm
+transformers
